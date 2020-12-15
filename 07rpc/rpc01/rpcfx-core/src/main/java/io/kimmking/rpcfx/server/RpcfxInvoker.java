@@ -5,16 +5,19 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.kimmking.rpcfx.api.RpcfxRequest;
 import io.kimmking.rpcfx.api.RpcfxResolver;
 import io.kimmking.rpcfx.api.RpcfxResponse;
+import io.kimmking.rpcfx.common.RpcfxException;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
+@Slf4j
 public class RpcfxInvoker {
 
     private RpcfxResolver resolver;
 
-    public RpcfxInvoker(RpcfxResolver resolver){
+    public RpcfxInvoker(RpcfxResolver resolver) {
         this.resolver = resolver;
     }
 
@@ -23,6 +26,7 @@ public class RpcfxInvoker {
         String serviceClass = request.getServiceClass();
 
         // 作业1：改成泛型和反射
+        // TODO 处理beanException
         Object service = resolver.resolve(serviceClass);//this.applicationContext.getBean(serviceClass);
 
         try {
@@ -32,14 +36,21 @@ public class RpcfxInvoker {
             response.setResult(JSON.toJSONString(result, SerializerFeature.WriteClassName));
             response.setStatus(true);
             return response;
-        } catch ( IllegalAccessException | InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
 
             // 3.Xstream
 
             // 2.封装一个统一的RpcfxException
             // 客户端也需要判断异常
-            e.printStackTrace();
-            response.setException(e);
+            String msg = "invoke error: " + request.getServiceClass() + "." + request.getMethod();
+            log.error(msg, e);
+            RpcfxException rpcfxException;
+            if (e instanceof InvocationTargetException) {
+                rpcfxException = new RpcfxException(((InvocationTargetException)e).getTargetException(), msg);
+            } else {
+                rpcfxException = new RpcfxException(e, msg);
+            }
+            response.setException(rpcfxException);
             response.setStatus(false);
             return response;
         }

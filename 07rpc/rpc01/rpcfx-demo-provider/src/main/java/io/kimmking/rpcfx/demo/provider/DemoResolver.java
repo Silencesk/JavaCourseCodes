@@ -1,6 +1,8 @@
 package io.kimmking.rpcfx.demo.provider;
 
 import io.kimmking.rpcfx.api.RpcfxResolver;
+import io.kimmking.rpcfx.common.BusinessException;
+import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
@@ -14,7 +16,14 @@ public class DemoResolver implements RpcfxResolver, ApplicationContextAware {
     }
 
     @Override
-    public Object resolve(String serviceClass) {
-        return this.applicationContext.getBean(serviceClass);
+    public <T> T resolve(String serviceClass) {
+        Class<T> clazz;
+        try {
+            clazz = (Class<T>) Class.forName(serviceClass);
+        } catch (ClassNotFoundException e) {
+            throw new BusinessException("illegalArgument of  serviceClass: " + serviceClass);
+        }
+
+        return this.applicationContext.getBean(clazz);
     }
 }
